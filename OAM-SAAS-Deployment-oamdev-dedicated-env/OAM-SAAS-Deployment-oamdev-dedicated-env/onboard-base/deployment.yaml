@@ -1,0 +1,60 @@
+---
+# OAM ONBOARDING UI
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oam-onboarding
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oam-onboarding
+  template:
+    metadata:
+      labels:
+        app: oam-onboarding
+    spec:
+      containers:      
+      - name: oam-onboarding
+        image: "997742452154.dkr.ecr.us-east-1.amazonaws.com/infobelt/oam-onboardingtest2:2202.01.00-029"
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 9090
+        env:
+          - name: ORION_SERVER
+            value: "onboarding"
+          - name: SPRING_DATASOURCE_DRIVERCLASSNAME
+            value: oracle.jdbc.driver.OracleDriver
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:oracle:thin:@onboarding-oam-dev-dsaas.cykpn1gqzvm9.us-east-1.rds.amazonaws.com:ORCL
+          - name: SPRING_DATASOURCE_USERNAME
+            value: openskye
+          - name: SPRING_DATASOURCE_PASSWORD
+            value: changeme12
+          - name: SERVER_PORT
+            value: "9090"
+          - name: SERVER_SERVLET_CONTEXT_PATH
+            value: "/"
+          - name: OAM_CONFIGURATION_WEB_DOMAIN
+            value: "https://infobelt.net"
+          - name: OAMONBOARDING_CONFIGURATION_VIEW_DEMO_URL
+            value: "https://www.youtube.com/watch?v=cL_PEmQnnNg"
+          - name: OAMONBOARDING_CONFIGURATION_APP_WEBSITE_URL
+            value: "https://onboarding-qa.infobelt.net"
+          - name: OAMONBOARDING_CONFIGURATION_EMAIL_SETTINGS_ADMIN_EMAIL
+            value: tej.kiran@infobelt.com
+          - name: ENV_CONFIGURATION_REPO_PATH
+            value: https://github.com/infobelt/OAM-SAAS-Deployment.git
+          - name: ENV_CONFIGURATION_BRANCH_NAME
+            value: oamdev-dedicated-env
+          - name: ENV_CONFIGURATION_DEPLOYMENT_FILE_NAME
+            value: oamapp-patch.yaml
+          - name: STRIPE_CONFIGURATION_WEB_HOOK_URL
+            value: "https://onboarding-dev.infobelt.net/api/stripe/webHook/listenWebHook"
+          - name: STRIPE_CONFIGURATION_WEB_HOOK_SECRET
+            value: "we_1LYQGFDtfOAuuLFadfXkcK3c"
+          - name: STRIPE_CONFIGURATION_SECRET_KEY
+            value: sk_test_51LShvvDtfOAuuLFaqUAL9U8cXpsWviYG5vTL1RSaPPSjkQJa21BxLAnNrK9ezUSoYKWzRq2tH9GDQmqJpTxYSYan00NcMs4GCB
+          - name: ENV_CONFIGURATION_DATA_DIR
+            value: /appData/tmp
+---

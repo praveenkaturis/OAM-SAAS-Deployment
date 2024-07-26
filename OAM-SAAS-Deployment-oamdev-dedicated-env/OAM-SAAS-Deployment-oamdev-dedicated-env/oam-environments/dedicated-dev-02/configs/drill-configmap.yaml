@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: drill-config-cm
+  labels:
+    app: oam-drill
+data:
+  drill-env.sh: |
+    # The below values are for the drill resource memory set to 8G in the values.yaml file
+    export DRILL_PID_DIR="/opt/drill"
+    #export DRILLBIT_MAX_PROC_MEM=3G
+    export DRILL_HEAP=4G
+    # export DRILL_MAX_DIRECT_MEMORY=2G
+    # export DRILLBIT_CODE_CACHE_SIZE=1024M
+
+  drill-override.conf: |
+    drill.exec: {
+      cluster-id: "drillcluster",
+      zk.connect: "zk-service:2181/drill/drillcluster",
+      sys.store.provider.local.path="/appData/oam/drill/drillData",
+      hashjoin: {
+        fallback.enabled="true",
+        num_partitions: 32,
+        spill: {
+          fs: "file:///",
+          directories: [ "/appData/oam/drill/drillSpill" ]
+        }
+      },
+      sys.store.provider.zk.blobroot: "/appData/oam/drill/drillPstore",
+      functions.cast_empty_string_to_null="true",
+      hashagg: {
+        num_partitions: 32,
+        spill: {
+          fs: "file:///",
+          directories: [ "/appData/oam/drill/drillSpill" ]
+        }
+      },
+      spill.fs:"file:///",
+      spill.directories: [ "/appData/oam/drill/drillSpill" ],
+      impersonation: {
+            enabled: true,
+            max_chained_user_hops: 3
+      },
+      security: {
+            auth.mechanisms: [ "PLAIN" ],
+      },
+      security.user.auth: {
+            enabled: false,
+            packages += "org.apache.drill.exec.rpc.user.security",
+            impl: "pam4j",
+            pam_profiles: [ "sudo", "login" ]
+      }
+    }
+

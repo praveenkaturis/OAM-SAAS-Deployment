@@ -1,0 +1,29 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: efs-oam-pv-dev-1
+spec:
+  capacity:
+    storage: 1Mi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: fs-0b3e272f85fe67e03::fsap-0437e3c689bb688b4  # updated fsap to oam-dev-01 ## fs accesspoint has to be created for each env/customer and update here
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: efs-oam-dev-1
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  volumeName: efs-oam-pv-dev-1
+  resources:
+    requests:
+      storage: 1Mi
+---

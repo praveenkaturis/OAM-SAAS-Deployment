@@ -1,0 +1,24 @@
+# kustomization-actual.yaml
+bases:
+  - ../../oam-base
+patchesStrategicMerge:
+  - oamapp-patch.yaml
+  - oamapp-volume-mount.yaml
+  #- oamapp-resources.yaml  # not adding resources for the pods
+resources:
+  - oam-namespace.yaml
+  - dummy-app.yaml
+  - oamapp-efs-accesspoint.yaml
+  - configs/drill-configmap.yaml
+  - configs/es-configmap.yaml
+  #- nw-policy.yaml
+
+namespace: oam-dev-2
+---
+# kustomization.yaml
+resources:
+  - oam-namespace.yaml
+  - dummy-app.yaml
+
+namespace: oam-dev-2
+---

@@ -1,0 +1,5 @@
+resources:
+  - oam-namespace.yaml
+  - dummy-app.yaml
+
+namespace: oam-dev-3

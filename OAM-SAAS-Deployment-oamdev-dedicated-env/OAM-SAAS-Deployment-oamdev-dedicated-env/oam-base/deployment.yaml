@@ -1,0 +1,400 @@
+---
+# Zoo Keeper
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: oam-zk
+spec:
+  serviceName: zk-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oam-zk
+  template:
+    metadata:
+      labels:
+        app: oam-zk
+    spec:
+      containers:
+      - name: oam-zk
+        imagePullPolicy: Always
+        image: bitnami/zookeeper:3.8.0     
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+        ports:
+        - containerPort: 2181
+          name: client
+        - containerPort: 2888
+          name: server
+        - containerPort: 3888
+          name: leader-election          
+        env:
+          - name: ALLOW_ANONYMOUS_LOGIN
+            value: "yes"        
+          - name: ZOO_TICK_TIME
+            value: "4000"
+          - name: ZOO_INIT_LIMIT
+            value: "100"
+          - name: ZOO_SYNC_LIMIT
+            value: "10"
+          - name: ZOO_MAX_CNXNS
+            value: "0"
+          - name: ZOO_MAX_CLIENT_CNXNS
+            value: "600"
+          - name: ZOO_AUTOPURGE_INTERVAL
+            value: "0"
+          - name: ZOO_HEAP_SIZE
+            value: "2048"
+          - name: ZOO_MAX_SESSION_TIMEOUT
+            value: "100000"
+          - name: ZOO_JUTE_MAXBUFFER  ## Values in bytes - 2Mb
+            value: "2099200"
+          - name: ZOO_JUTE_MAXBUFFER_EXTRASIZE ## Values in bytes - 5Mb
+            value: "5242880"
+---
+# Drill 
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: oam-drill
+spec:
+  serviceName: oam-drill-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oam-drill
+  template:
+    metadata:
+      labels:
+        app: oam-drill
+    spec:
+      containers:
+      - name: oam-drill
+        imagePullPolicy: Always
+        image: infobeltinc/apache-drill:1.19.0  #agirish/drill:1.17.0 # smizy/apache-drill:1.16.0-alpine
+        env:
+          - name: CLUSTER_ID
+            value: drillcluster
+          - name: ZK_SERVERS
+            value: "zk-service:2181"        
+          - name: DRILL_CLUSTER_ID
+            value: drillcluster 
+          - name: DRILL_ZOOKEEPER_QUORUM
+            value: "zk-service:2181"
+          - name: DRILL_ZK_ROOT
+            value: drillcluster 
+          - name: DRILL_HTTP_PORT
+            value: "8047"
+          - name: DRILL_USER_SERVER_PORT
+            value: "31010"
+        ports:
+        - containerPort: 8047 
+          name: http
+        - containerPort: 31010
+          name: userport
+        - containerPort: 31011 
+          name: controlport
+        - containerPort: 31012
+          name: dataport
+        tty: true  
+      initContainers:
+        - name: zk-available
+          image: busybox
+          command: ['sh', '-c', 'until nc -z zk-service 2181; do echo Waiting for ZK to come up; sleep 5; done; ']
+---
+# OAM UI
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oam-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oam-ui
+  template:
+    metadata:
+      labels:
+        app: oam-ui
+    spec:
+      containers:      
+      - name: oam-ui
+        image: "997742452154.dkr.ecr.us-east-1.amazonaws.com/infobelt/oam-saas:4.52.9" #"997742452154.dkr.ecr.us-east-2.amazonaws.com/infobelt/isatest:4.51.250"
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8090
+        env:
+          - name: ORION_SERVER
+            value: "ui"
+          - name: SERVER_PORT
+            value: "8090"
+          #- name: SERVER_SERVLET_CONTEXT_PATH
+          #  value: "/webapp"
+          - name: SERVER_SSL_ENABLED
+            value: "false" 
+          - name: SKYE_HOSTNAME
+            value: "oam-server"
+          - name: ONBOARDING_CONFIGURATION_ENDPOINT_URL
+            value: https://onboarding-dev.infobelt.net
+          - name: PRODUCT_TYPE
+            value: "2"
+          - name: ONBOARDING_TEST_VALIDATION_IGNORE
+            value: "false"
+---            
+# OAM SERVER            
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oam-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oam-server  
+  template:
+    metadata:
+      labels:
+        app: oam-server
+    spec:
+      containers:  
+      - name: oam-server
+        image: "997742452154.dkr.ecr.us-east-1.amazonaws.com/infobelt/oam-saas:4.52.9"  #"997742452154.dkr.ecr.us-east-2.amazonaws.com/infobelt/isatest:4.51.250"
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8080
+        env:
+          - name: ORION_SERVER
+            value: "server"
+          - name: SPRING_DATASOURCE_DRIVERCLASSNAME
+            value: oracle.jdbc.driver.OracleDriver
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:oracle:thin:@onboarding-oam-dev-dsaas.cykpn1gqzvm9.us-east-1.rds.amazonaws.com:1521:OPENSKYE
+          - name: SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA
+            value: openskye
+          - name: SPRING_DATASOURCE_USERNAME
+            value: openskye
+          - name: SPRING_DATASOURCE_PASSWORD
+            value: changeme
+          - name: SPRING_DATASOURCE_MAXIMUMPOOLSIZE
+            value: "60"
+          - name: SPRING_DATA_JEST_URI
+            value: http://localhost:9200
+          - name: SPRING_JPA_DATABASE-PLATFORM
+            value: org.hibernate.dialect.Oracle12cDialect
+          - name: SPRING_JPA_DATABASE
+            value: ORACLE
+          - name: SERVER_PORT
+            value: "8080"
+          - name: SERVER_SERVLET_CONTEXT_PATH
+            value: "/webapp"
+          - name: SPRING_LIQUIBASE_CHANGE_LOG
+            value: "classpath:/db/changelog/db.changelog-master.xml"
+          - name: SPRING_LIQUIBASE_ENABLED
+            value: "false"
+          - name: BOOTSTRAP_CONFIGURATION_DOMAIN
+            value: "Skye"
+          - name: BOOTSTRAP_CONFIGURATION_ORGANIZATION
+            value: "openskye.org"
+          - name: DRILL_URL
+            value: "jdbc:drill:zk=zk-service:2181/drill/drillcluster"
+          - name: ZOOKEEPER_SERVERS
+            value: "zk-service:2181" 
+          - name: ZOOKEEPER_PATHS
+            value: "/orion/workers_latch,/orion/workers_latch2,/orion/workers_latch3"
+          - name: ZOOKEEPER_MEMBERSHIP_PATHS
+            value: "/orion/workers_group,/orion/workers_group2,/orion/workers_group3"
+          - name: ELASTICSEARCH_HOST
+            value: oam-elastic-service
+          - name: ELASTICSEARCH_PORT
+            value: "9300"
+          - name: ELASTICSEARCH_REST_API_PORT
+            value: "9200"
+          - name: ELASTICSEARCH_USERNAME
+            value: "elastic"
+          - name: ELASTICSEARCH_PASSWORD ## for 4x-qa env the pwd is changeme, qa1 env the pwd is changeme12
+            value: "changeme12"
+          - name: ELASTICSEARCH_BASICAUTHWITHSSL
+            value: "true"
+          - name: ELASTICSEARCH_TRUSTSTOREPATH
+            value: "/appData/oam/certs/elastic-certificates.p12"
+          - name: SPRING_RABBITMQ_PORT
+            value: "5672"
+          - name: SPRING_RABBITMQ_HOST
+            value: 18.224.23.228
+          - name: SPRING_RABBITMQ_USERNAME
+            value: admin
+          - name: SPRING_RABBITMQ_PASSWORD
+            value: password
+          - name: RABBITMQ_EXCHANGE
+            value: orion_regent_project_exchange
+          - name: RABBITMQ_AMQFLAG
+            value: "false"
+          - name: PRODUCT_TYPE
+            value: "2"
+          - name: HEALTH_CHECK_CONFIGURATION_CHECK_FREQUENCY
+            value: 0 */2 * * * *
+        volumeMounts:
+          - name: elastic-certificates
+            mountPath: /appData/oam/certs
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: elastic-certificates
+          emptyDir: {}
+---
+# OAM Wokers
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: oam-workers
+spec:
+  serviceName: oam-worker-service
+  selector:
+    matchLabels: 
+      app: oam-workers
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: oam-workers
+    spec:
+      containers:
+      - name: oam-worker
+        image: "997742452154.dkr.ecr.us-east-1.amazonaws.com/infobelt/oam-saas:4.52.9"  #"997742452154.dkr.ecr.us-east-2.amazonaws.com/infobelt/isatest:4.51.250"
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8080
+          - containerPort: 8080
+        env:
+          - name: ORION_SERVER
+            value: "worker"
+          - name: SPRING_DATASOURCE_DRIVERCLASSNAME
+            value: oracle.jdbc.driver.OracleDriver
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:oracle:thin:@onboarding-oam-dev-dsaas.cykpn1gqzvm9.us-east-1.rds.amazonaws.com:1521:OPENSKYE
+          - name: SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA
+            value: openskye
+          - name: SPRING_DATASOURCE_USERNAME
+            value: openskye
+          - name: SPRING_DATASOURCE_PASSWORD
+            value: changeme
+          - name: SPRING_DATASOURCE_MAXIMUMPOOLSIZE
+            value: "10"
+          - name: SPRING_DATA_JEST_URI
+            value: http://localhost:9200
+          - name: SPRING_JPA_DATABASE-PLATFORM
+            value: org.hibernate.dialect.Oracle12cDialect
+          - name: SPRING_JPA_DATABASE
+            value: ORACLE
+          - name: WORKER_CONFIGURATION_HOSTNAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: DRILL_URL
+            value: "jdbc:drill:zk=zk-service:2181/drill/drillcluster"
+          - name: ZOOKEEPER_SERVERS
+            value: "zk-service:2181"
+          - name: ZOOKEEPER_PATHS
+            value: "/orion/workers_latch,/orion/workers_latch2,/orion/workers_latch3"
+          - name: ZOOKEEPER_MEMBERSHIP_PATHS
+            value: "/orion/workers_group,/orion/workers_group2,/orion/workers_group3"
+          - name: WORKER_CONFIGURATION_ZOOKEEPER_PATH
+            value: "/orion/workers_latch"
+          - name: WORKER_CONFIGURATION_ZOOKEEPER_MEMBERSHIP_PATH
+            value: "/orion/workers_group"
+          - name: ELASTICSEARCH_HOST
+            value: oam-elastic-service
+          - name: ELASTICSEARCH_PORT
+            value: "9300"
+          - name: ELASTICSEARCH_REST_API_PORT
+            value: "9200"
+          - name: ELASTICSEARCH_USERNAME
+            value: "elastic"
+          - name: ELASTICSEARCH_PASSWORD ## for 4x-qa env the pwd is changeme, qa1 env the pwd is changeme12
+            value: "changeme12"
+          - name: ELASTICSEARCH_BASICAUTHWITHSSL
+            value: "true"
+          - name: ELASTICSEARCH_TRUSTSTOREPATH
+            value: "/appData/oam/certs/elastic-certificates.p12"
+          - name: JAVA_OPTS
+            value: "-Xms1024m -Xmx4096m"
+          - name: WORKER_CONFIGURATION_DELIMITED_FILE_ARCHIVE_FOLDER
+            value: /appData/oam/delimitedFileArchive
+          - name: WORKER_CONFIGURATION_KEEP_ARCHIVING_EVEN_AFTER_AN_EXCEPTION_IS_THROWN
+            value: "true"
+          - name: WORKER_CONFIGURATION_KEEP_ARCHIVING_EVEN_AFTER_VERIFICATION_FAILED            
+            value: "true"
+        volumeMounts:
+          - name: elastic-certificates
+            mountPath: /appData/oam/certs
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: elastic-certificates
+          emptyDir: {}
+---
+# Elastic Search 7.17.2
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oam-elastic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oam-elastic
+  template:
+    metadata:
+      labels:
+        app: oam-elastic
+    spec:
+      containers:
+      - name: elastic
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.17.2
+        securityContext:
+          capabilities:
+          runAsNonRoot: true
+          runAsUser: 1000
+        env:
+          - name: discovery.type
+            value: single-node
+          - name: cluster.name
+            value: elasticsearch
+          - name: ELASTICSEARCH_HOST
+            value: oam-elastic-service
+          - name: ELASTIC_PASSWORD
+            value: changeme12
+          - name: ELASTICSEARCH_PORT
+            value: "9300"
+          - name: ELASTICSEARCH_REST_API_PORT
+            value: "9200"
+          - name: node.max_local_storage_nodes
+            value: "10"
+        volumeMounts:
+          - name: elastic-certificates
+            mountPath: /usr/share/elasticsearch/config/certs
+          - name: config
+            mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+            readOnly: true
+            subPath: elasticsearch.yml
+      initContainers:
+      - name: create-certs
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.17.2
+        command: [ 'sh' , '-c' , "  bin/elasticsearch-certutil ca --silent --pass '' --out elastic-stack-ca.p12 ; sleep 20 ;  bin/elasticsearch-certutil cert --silent --ca elastic-stack-ca.p12 -name 'CN=oam-elastic-service' --ca-pass '' --pass '' --out config/certs/elastic-certificates.p12 ; sleep 20 ; cp -rpf /usr/share/elasticsearch/elastic-stack-ca.p12 /usr/share/elasticsearch/config/certs/ " ]
+        securityContext:
+          capabilities:
+          runAsNonRoot: true
+          runAsUser: 1000
+        volumeMounts:
+          - name: elastic-certificates
+            mountPath: /usr/share/elasticsearch/config/certs
+      volumes:
+        - name:  config
+          configMap:
+            name: myeschart7172-config # update the configmap name as per chart version and name
+        - name: elastic-certificates
+          emptyDir: {}      
+      imagePullSecrets: []
+      securityContext:
+        fsGroup: 1000
+---

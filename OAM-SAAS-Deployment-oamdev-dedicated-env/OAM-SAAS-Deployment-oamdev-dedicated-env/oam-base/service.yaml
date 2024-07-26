@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: oam-ui
+  labels:
+    app: oam-ui
+spec:
+  type: ClusterIP
+  ports:
+  - name: ui
+    port: 80
+    targetPort: 8090
+    protocol: TCP
+  - name: app
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  - name: admin
+    port: 8081
+    targetPort: 8081
+    protocol: TCP
+  selector:
+    app: oam-ui
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oam-server
+  labels:
+    app: oam-server  
+spec:
+  type: ClusterIP
+  ports:
+  - name: server
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    app: oam-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zk-service
+  labels:
+    app: oam-zk
+spec:
+  ports:
+    - name: client
+      port: 2181
+    - name: server
+      port: 2888
+    - name: leader-election
+      port: 3888
+  selector:
+    app: oam-zk
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oam-drill-service
+  labels:
+    app: oam-drill
+spec:
+  ports:
+  - port: 8047
+    name: http
+  - port: 31010
+    name: userport
+  - port: 31011
+    name: controlport
+  - port: 31012
+    name: dataport
+  selector:
+    app: oam-drill
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oam-elastic-service
+  labels:
+    app: oam-elastic
+spec:
+  ports:
+  - port: 9200
+    name: http
+  - port: 9300
+    name: tcp
+  selector:
+    app: oam-elastic
+  type: ClusterIP
+---

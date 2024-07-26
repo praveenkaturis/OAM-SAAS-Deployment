@@ -1,0 +1,15 @@
+apiVersion: crd.projectcalico.org/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-namespaces
+spec:
+  types:
+  - Ingress
+  - Egress
+  ingress:
+  - action: Deny
+    protocol: TCP
+    source:
+      namespaceSelector: name == 'oam-dev-2'
+  egress:
+  - action: Allow

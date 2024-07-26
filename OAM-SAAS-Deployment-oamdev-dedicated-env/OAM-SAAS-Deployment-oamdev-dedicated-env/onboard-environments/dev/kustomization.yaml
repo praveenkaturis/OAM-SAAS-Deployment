@@ -1,0 +1,12 @@
+bases:
+  - ../../onboard-base
+patches:
+  - deployment-patch.yaml
+resources:
+  - onboard-namespace.yaml
+  - onboard-pv-pvc.yaml 
+  - oam-onboard-ingress.yaml
+
+namespace: oam-onboard-dev
+commonLabels:
+  env: oam-onboard-dev

@@ -1,0 +1,124 @@
+---
+# Zoo Keeper
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: oam-zk
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: oam-zk
+    spec:
+      containers:
+      - name: oam-zk
+        resources: 
+          limits:
+            cpu: 400m
+            memory: 3000Mi
+          requests:
+            cpu: 400m
+            memory: 3000Mi
+---
+# Drill 
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: oam-drill
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: oam-drill
+        resources: 
+          limits:
+            cpu: 500m
+            memory: 8000Mi
+          requests:
+            cpu: 500m
+            memory: 6000Mi
+---
+# OAM UI
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oam-ui
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: oam-ui
+        resources:
+          limits:
+            cpu: 500m
+            memory: 4000Mi
+          requests:
+            cpu: 500m
+            memory: 4000Mi               
+---
+# OAM Server            
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oam-server
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:       
+      - name: oam-server 
+        resources:
+          limits:
+            cpu: 500m
+            memory: 4000Mi
+          requests:
+            cpu: 500m
+            memory: 4000Mi
+---
+# OAM Wokers
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: oam-workers
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: oam-worker
+        env:
+        - name: JAVA_OPTS
+          value: "-Xms1024m -Xmx4096m"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 5000Mi
+          requests:
+            cpu: 500m
+            memory: 5000Mi
+---
+# Elastic
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oam-elastic
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: elastic
+        env:
+          - name: ES_JAVA_OPTS
+            value: "-Xms1g -Xmx4g"
+        resources:
+         limits:
+           cpu: 500m
+           memory: 5000Mi
+         requests:
+           cpu: 500m
+           memory: 5000Mi
+---

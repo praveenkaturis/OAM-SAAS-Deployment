@@ -1,0 +1,125 @@
+---
+# Drill 
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: oam-drill
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: oam-drill
+        volumeMounts:
+          - mountPath: /appData/oam 
+            name: efs-oam-dev-1
+          - mountPath: /opt/drill/conf/drill-override.conf
+            name: drill-config-cm
+            subPath: drill-override.conf
+          - mountPath: /opt/drill/conf/drill-env.sh
+            name: drill-config-cm
+            subPath: drill-env.sh
+      volumes:
+        - name: efs-oam-dev-1
+          persistentVolumeClaim:
+            claimName: efs-oam-dev-1
+        - name: drill-config-cm
+          configMap:
+            name: drill-config-cm
+---
+# OAM UI
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oam-ui
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:      
+      - name: oam-ui
+        volumeMounts:
+          - name: efs-oam-dev-1
+            mountPath: /appData/oam  
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: efs-oam-dev-1
+          persistentVolumeClaim:
+            claimName: efs-oam-dev-1         
+---            
+# OAM Server
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oam-server
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:        
+      - name: oam-server
+        volumeMounts:
+          - name: efs-oam-dev-1
+            mountPath: /appData/oam
+          - name: efs-oam-dev-1  
+            mountPath: /appData/oam/certs
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: efs-oam-dev-1
+          persistentVolumeClaim:
+            claimName: efs-oam-dev-1
+---
+# OAM Wokers
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: oam-workers
+spec:
+  replicas: 3 
+  template:
+    spec:
+      containers:
+      - name: oam-worker
+        volumeMounts:
+          - name: efs-oam-dev-1
+            mountPath: /appData/oam
+          - name: efs-oam-dev-1  
+            mountPath: /appData/oam/certs
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: efs-oam-dev-1
+          persistentVolumeClaim:
+            claimName: efs-oam-dev-1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oam-elastic
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: elastic
+        volumeMounts:
+          - name: efs-oam-dev-1
+            mountPath: /usr/share/elasticsearch/config/certs
+          - name: config
+            mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+            readOnly: true
+            subPath: elasticsearch.yml
+          - name: efs-oam-dev-1
+            mountPath: /usr/share/elasticsearch/data
+      initContainers:
+      - name: create-certs
+        volumeMounts:
+          - name: efs-oam-dev-1
+            mountPath: /usr/share/elasticsearch/config/certs
+      volumes:
+        - name:  config
+          configMap:
+            name: myeschart7172-config # update the configmap name as per chart version and name
+        - name: efs-oam-dev-1
+          persistentVolumeClaim:
+            claimName: efs-oam-dev-1            
+---

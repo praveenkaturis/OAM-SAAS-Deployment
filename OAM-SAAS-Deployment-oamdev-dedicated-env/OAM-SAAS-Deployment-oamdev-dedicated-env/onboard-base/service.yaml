@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oam-onboarding
+  labels:
+    app: oam-onboarding
+spec:
+  type: ClusterIP
+  ports:
+  - name: onboarding
+    port: 80
+    targetPort: 9090
+    protocol: TCP
+  selector:  
+    app: oam-onboarding
+---

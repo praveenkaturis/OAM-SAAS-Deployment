@@ -1,0 +1,114 @@
+# OAM UI
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oam-ui
+spec:
+  template:
+    spec:
+      containers:
+      - name: oam-ui
+        image: "997742452154.dkr.ecr.us-east-1.amazonaws.com/infobelt/oam-saas-qa:4.52.4"
+        imagePullPolicy: Always
+        env:
+          - name: ONBOARDING_CONFIGURATION_ENDPOINT_URL
+            value: https://onboarding-dev.infobelt.net
+---
+# OAM Server 
+
+metadata:
+  name: oam-server
+apiVersion: apps/v1
+kind: Deployment
+spec:
+  template:
+    spec:
+      containers:
+      - image: 997742452154.dkr.ecr.us-east-1.amazonaws.com/infobelt/oam-saas-qa:4.52.4
+        imagePullPolicy: Always
+        name: oam-server
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:oracle:thin:@onboarding-oam-dev-dsaas.cykpn1gqzvm9.us-east-1.rds.amazonaws.com:1521:ORCL
+        - name: SPRING_DATASOURCE_USERNAME
+          value: Constantin
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: changeme
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA
+          value: Constantin
+---
+# OAM Workers 
+
+metadata:
+  name: oam-workers
+apiVersion: apps/v1
+kind: StatefulSet
+spec:
+  template:
+    spec:
+      containers:
+      - image: 997742452154.dkr.ecr.us-east-1.amazonaws.com/infobelt/oam-saas-qa:4.52.4
+        imagePullPolicy: Always
+        name: oam-worker
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:oracle:thin:@onboarding-oam-dev-dsaas.cykpn1gqzvm9.us-east-1.rds.amazonaws.com:1521:ORCL
+        - name: SPRING_DATASOURCE_USERNAME
+          value: Constantin
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: changeme
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA
+          value: Constantin
+        - name: JAVA_OPTS
+          value: -Xms1024m -Xmx4096m
+---
+# Elastic
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oam-elastic
+spec:
+  template:
+    spec:
+      containers:
+      - name: elastic
+        env:
+          - name: ES_JAVA_OPTS
+            value: "-Xms1g -Xmx4g"
+---
+# OAM Ingress 
+
+metadata:
+  name: oam-ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+spec:
+  rules:
+  - host: sbi001.infobelt.net
+    http:
+      paths:
+      - path: /
+        backend:
+          service:
+            port:
+              number: 80
+            name: oam-ui
+        pathType: Prefix
+  - host: drill.sbi001.infobelt.net
+    http:
+      paths:
+      - path: /
+        backend:
+          service:
+            port:
+              number: 8047
+            name: oam-drill-service
+        pathType: Prefix
+  tls:
+  - secretName: sbi001-infobelt-net
+    hosts:
+    - sbi001.infobelt.net
+  - secretName: drill-sbi001-infobelt-net
+    hosts:
+    - drill.sbi001.infobelt.net
+---

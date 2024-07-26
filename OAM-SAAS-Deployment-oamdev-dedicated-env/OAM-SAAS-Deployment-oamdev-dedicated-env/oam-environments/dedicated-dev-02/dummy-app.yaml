@@ -1,0 +1,23 @@
+# Dummy app created as place holder for argo deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dummy-app #guestbook-ui
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: dummy-app #guestbook-ui
+  template:
+    metadata:
+      labels:
+        app: dummy-app #guestbook-ui
+    spec:
+      containers:
+      - image: gcr.io/heptio-images/ks-guestbook-demo:0.2
+        name: dummy-app 
+        ports:
+        - containerPort: 80
+---

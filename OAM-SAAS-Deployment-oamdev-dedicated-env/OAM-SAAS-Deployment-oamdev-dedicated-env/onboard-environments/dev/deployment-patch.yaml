@@ -1,0 +1,65 @@
+---
+# OAM ONBOARDING UI
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oam-onboarding
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:      
+      - name: oam-onboarding
+        image: "997742452154.dkr.ecr.us-east-1.amazonaws.com/infobelt/oam-onboardingtest2:2202.01.00-030"   # Dev env picks the image from oam-onboarding-qa repo, later can be updated as needed
+        env:
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:oracle:thin:@onboarding-oam-dev-dsaas.cykpn1gqzvm9.us-east-1.rds.amazonaws.com:1521:ORCL
+          - name: SPRING_DATASOURCE_USERNAME
+            value: openskye
+          - name: SPRING_DATASOURCE_PASSWORD
+            value: changeme12     
+          - name: SPRING_MAIL_HOST
+            value: email-smtp.us-east-1.amazonaws.com
+          - name: SPRING_MAIL_USERNAME
+            value: AKIA6QTQVTW5IK7W7CX2
+          - name: SPRING_MAIL_PASSWORD
+            value: BBYntL9YSnLxEhyNMhHGTrl5UCG5/NA8QA72Pe/T+P1r
+          - name: OAM_CONFIGURATION_WEB_DOMAIN
+            value: "https://infobelt.net"
+          - name: OAMONBOARDING_CONFIGURATION_APP_WEBSITE_URL
+            value: "https://onboarding-dev.infobelt.net"
+          - name: OAMONBOARDING_CONFIGURATION_EMAIL_SETTINGS_ADMIN_EMAIL
+            value: oam.stripe@infobelt.com
+          - name: ENV_CONFIGURATION_REPO_PATH
+            value: "https://github.com/infobelt/OAM-SAAS-Deployment.git"
+          - name: ENV_CONFIGURATION_BRANCH_NAME
+            value: oamdev-dedicated-env
+          - name: ENV_CONFIGURATION_DEPLOYMENT_FILE_NAME
+            value: oamapp-patch.yaml
+          - name: BACKEND_ONBOARDING_PROCESS_TRIGGERTIME
+            value: "0 0/2 * * * *" #To trigger at every midnight use the exp "0 0 0 * * *".
+          - name: BACKEND_ONBOARDING_PROCESS_COMPLETION_TRIGGER_INTERVAL
+            value: "0 0/10 * * * *"
+          - name: BACKEND_ONBOARDING_PROCESS_CREATE_USER_TRIGGER_TIME
+            value: "0 0/2 * * * *" # triggers every one hour
+          - name: BACKEND_ONBOARDING_PROCESS_CREATE_SCHEMA_THRESHOLD
+            value: "2"
+          - name: BACKEND_ONBOARDING_PROCESS_TENANT_DATA_TRIGGER_TIME
+            value: "0 */2 * * * *"
+          - name: BACKEND_ONBOARDING_PROCESS_PAYMENT_FAILURE_NOTIFICATION
+            value: "0 30 1 * * *"
+          - name: BACKEND_ONBOARDING_PROCESS_VERIFICATION_MAIL_INTERVAL
+            value: "0 0 */1 * * *"
+          - name: OAMONBOARDING_CONFIGURATION_EMAIL_SETTINGS_FROM_ADDRESS
+            value: tej.kiran@infobelt.com # To be cahnged with a new common org email account
+          - name: OAMONBOARDING_CONFIGURATION_VIEW_DEMO_URL
+            value: "https://www.youtube.com/watch?v=cL_PEmQnnNg"
+        volumeMounts:
+          - name: efs-onboard-dev
+            mountPath: /appData/tmp
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: efs-onboard-dev
+          persistentVolumeClaim:
+            claimName: efs-onboard-dev           
+---
